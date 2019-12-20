@@ -1,22 +1,36 @@
 const app = require('express')()
 const bodyParser = require('body-parser')
-const redis = require("redis")
+const {
+    get,
+    set
+} = require('./redis-service')
 app.use(bodyParser.json())
 
-// Listen to the incoming request get request
-app.get('/redis', (request, response, next) => {
+// Listen to the incoming get request
+app.get('/redis/:message', async (request, response, next) => {
     try {
-        const ip = request.headers['x-forwarded-for'] || request.connection.remoteAddress
-        let attempts = await get(ip) || 0
-        await set(ip, attempts++)
-        const retrievedAttempt = await get(ip)
+        const message = request.params.message
+        const key = "message"
+        let oldMessage = await get(key)
+        await set(key, message)
+        const retrievedMessage = await get(key)
         response.json({
-            attempt: retrievedAttempt
+            previousMessage: oldMessage,
+            newMessage: retrievedMessage
         })
     } catch (error) {
-        console.log('error while setting data to ')
+        console.log('error while setting data to ', error)
         response.json({
             message: 'error'
         })
     }
+})
+
+
+app.listen(3000, (err) => {
+  if(err) {
+      console.log("Error starting server", err)
+  } else {
+      console.log("Server started in port 3000")
+  }
 })
